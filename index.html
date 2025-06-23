@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Squigler Coin App</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fefefe;
+      padding: 20px;
+      color: #222;
+    }
+    header {
+      background-color: #ffe358;
+      padding: 15px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    nav button {
+      margin: 0 5px;
+    }
+    main {
+      margin-top: 20px;
+    }
+    section, .wallet-info {
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: #666;
+    }
+    iframe {
+      width: 100%;
+      height: 400px;
+      border: none;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>🐛 Squigler Coin</h1>
+      <p><i>Wiggle your way to the moon!</i></p>
+      <nav id="tabs"></nav>
+    </header>
+    <main id="main"></main>
+    <footer>© 2025 Squigler Coin. All rights wiggled.</footer>
+  </div>
+  <script>
+    const TOKEN_ADDRESS = "0x2e4D74F8b36Ef4d38c9679A9EB451D9a25af40ac";
+    const SUPPLY = 1_000_000_000;
+    let address = null;
+    let price = null;
+    let tab = "home";
+    let balance = "0";
+    let airdropClaimed = false;
+
+    async function connectWallet() {
+      if (!window.ethereum) return alert("Please install MetaMask");
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      address = await signer.getAddress();
+      const contract = new ethers.Contract(TOKEN_ADDRESS, [
+        "function balanceOf(address) view returns (uint256)"
+      ], provider);
+      const raw = await contract.balanceOf(address);
+      balance = ethers.utils.formatUnits(raw, 18);
+      render();
+    }
+
+    async function fetchPrice() {
+      try {
+        const res = await axios.get(`https://api.dexscreener.com/latest/dex/pairs/ethereum/${TOKEN_ADDRESS}`);
+        price = res.data.pair.priceUsd;
+      } catch (e) {
+        price = null;
+      }
+    }
+
+    async function render() {
+      const tabs = ["home", "swap", "tokenomics", "leaderboard", "news", "shop", "game", "info"];
+      const tabNav = tabs.map(t => \`<button onclick="tab='\${t}';render()">\${t.charAt(0).toUpperCase() + t.slice(1)}</button>\`).join("");
+      document.getElementById("tabs").innerHTML = tabNav;
+
+      const main = document.getElementById("main");
+      await fetchPrice();
+
+      let html = "";
+      if (!address) {
+        html += '<div style="text-align:center;"><button onclick="connectWallet()">🔌 Connect Wallet</button></div>';
+      } else {
+        html += \`<div class="wallet-info">
+          <p><b>Wallet:</b> \${address.slice(0, 6)}...\${address.slice(-4)}</p>
+          <p><b>Balance:</b> \${parseFloat(balance).toFixed(2)} SQUIG</p>
+          <p><b>Price:</b> \$\${price ? Number(price).toFixed(6) : "..."}</p>
+          <p><b>Market Cap:</b> \$\${price ? (price * SUPPLY).toLocaleString() : "?"}</p>
+          <p><b>Holders:</b> 1000+</p>
+        </div>\`;
+      }
+
+      if (tab === "home") {
+        html += \`<section>
+          <img src="https://media.tenor.com/LDDoU2WRRrQAAAAC/worm-dance.gif" style="width:100%; max-height:250px; border-radius:10px;" />
+          <h2>Welcome to the Squiglerverse 🐛</h2>
+          <p>Your favorite worm coin is ready to wiggle through the crypto jungle.</p>
+        </section>\`;
+      } else if (tab === "swap") {
+        html += \`<section><h2>Swap ETH → SQUIG</h2><input placeholder="Enter ETH amount"><button style="margin-top:10px">Swap Coming Soon 🔁</button></section>\`;
+      } else if (tab === "tokenomics") {
+        html += \`<section><h2>📊 Tokenomics</h2><ul>
+          <li>Total Supply: 1,000,000,000 $SQUIG</li>
+          <li>3% Tax: 1% Dev, 2% Wiggle Wallet</li>
+          <li>Ownership: Renounced</li>
+          <li>100% Community-Owned</li>
+        </ul><button onclick="airdropClaimed=true;render()" \${airdropClaimed ? 'disabled' : ''}>🎁 \${airdropClaimed ? 'Airdrop Claimed' : 'Claim Free Airdrop'}</button></section>\`;
+      } else if (tab === "leaderboard") {
+        html += \`<section><h2>🏆 Top Squigglers</h2><ol><li>👑 SquigDaddy - 12.3M</li><li>🐍 Wormzilla - 9.8M</li><li>🐛 Lil’ Wiggz - 7.1M</li></ol></section>\`;
+      } else if (tab === "news") {
+        html += \`<section><h2>📰 Latest News</h2><ul><li><b>June 2025:</b> Squigler reaches 1,000 holders!</li><li><b>Coming Soon:</b> Worm Wars launches 🎮</li></ul></section>\`;
+      } else if (tab === "shop") {
+        html += \`<section><h2>🛍️ Squig Shop</h2><p>Coming soon: buy Squig merch using $SQUIG!</p><img src="https://i.imgur.com/ZPzBwCq.png" style="max-width:100%; border-radius:10px;" /></section>\`;
+      } else if (tab === "game") {
+        html += \`<section><h2>🎮 Squigler Rush</h2><iframe src="https://squiglercoin.github.io/game"></iframe><p>Play and earn $SQUIG for top leaderboard scores!</p></section>\`;
+      } else if (tab === "info") {
+        html += \`<section><h2>ℹ️ Info</h2><p><b>Token Address:</b> \${TOKEN_ADDRESS}</p><p><b>Twitter:</b> @SquiglerCoin</p><p><b>Telegram:</b> t.me/SquiglerCoin</p><p>Built for memes. Fueled by the wiggle.</p></section>\`;
+      }
+      main.innerHTML = html;
+    }
+
+    render();
+  </script>
+</body>
+</html>
